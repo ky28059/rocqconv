@@ -23,7 +23,7 @@ let string_of_name (n : Name.t) =
 let string_of_prim_token p =
   match p with
   | Number n -> NumTok.Signed.sprint n
-  | String s -> s
+  | String s -> "\"" ^ s ^ "\""
 
 let string_of_notation_entry e =
   match e with
