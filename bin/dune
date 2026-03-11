@@ -1,0 +1,4 @@
+(executable
+ (public_name rocqconv)
+ (name main)
+ (libraries rocqconv))
