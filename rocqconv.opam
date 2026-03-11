@@ -12,6 +12,7 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.21"}
+  "rocq-stdlib" {>= "9.0.0"}
   "rocq-runtime" {>= "9.0.1"}
   "odoc" {with-doc}
 ]

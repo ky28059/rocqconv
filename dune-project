@@ -22,6 +22,7 @@
  (depends
   ocaml
   dune
+  (rocq-stdlib (>= 9.0.0))
   (rocq-runtime (>= 9.0.1)))
  (tags
   ("add topics" "to describe" your project)))

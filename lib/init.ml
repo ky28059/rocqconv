@@ -16,6 +16,8 @@ let init_rocq_env () =
   let injections = Coqargs.injection_commands opts in
   let top = Names.DirPath.make [Names.Id.of_string "Top"] in
 
+  env_initialized := true;
+
   Coqinit.start_library
     ~intern:Vernacinterp.fs_intern
     ~top
