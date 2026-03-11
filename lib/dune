@@ -1,2 +1,7 @@
 (library
- (name rocqconv))
+ (name rocqconv)
+ (wrapped true)
+ (modules front init layout parser rocqconv)
+ (libraries
+  rocq-runtime.vernac
+  rocq-runtime.sysinit))

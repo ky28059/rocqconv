@@ -19,7 +19,10 @@
  (name rocqconv)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml)
+ (depends
+  ocaml
+  dune
+  (rocq-runtime (>= 9.0.1)))
  (tags
   ("add topics" "to describe" your project)))
 
