@@ -13,6 +13,11 @@ let spf = Printf.sprintf
 
 let lident_to_string (l : lident) = Id.to_string l.v
 
+let axiom_of_lname (c : lname) =
+  match c.v with
+  | Anonymous -> "_"
+  | Name id -> Id.to_string id
+
 let rec axiom_of_constr_expr (c : constr_expr) =
   match c.v with
   | CPrim p -> string_of_prim_token p
@@ -34,6 +39,11 @@ let rec axiom_of_constr_expr (c : constr_expr) =
   | CNotation (_, (_, "_ -> _"), ([t1; t2], _, _, _)) -> spf "(%s #==> %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2)
   | CNotation (_, (_, "_ <-> _"), ([t1; t2], _, _, _)) -> spf "(iff %s %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2) (* TODO *)
   | CNotation (_, (_, "~ _"), ([t], _, _, _)) -> spf "(not %s)" @@ axiom_of_constr_expr t
+
+  (* forall (n1 n2 ... : ty), e *)
+  | CProdN ([(CLocalAssum (ns, _, _, ty))], e) ->
+    let names = String.concat " " @@ List.map axiom_of_lname ns in
+    spf "fun (%s : %s) -> %s" names (axiom_of_constr_expr ty) (axiom_of_constr_expr e)
 
   | CNotation (_, (_, "exists _ .. _ , _"), ([t], _, _, _)) ->
     spf "fun ((%s [@ex]) : %s) -> %s" "..." "..." @@ axiom_of_constr_expr t (* TODO: var name, type *)
@@ -60,7 +70,7 @@ let rec axiom_of_constr_expr (c : constr_expr) =
   (* | CArray _ -> "(CArray ...)" *)
   | _ -> "unknown constr" (* TODO: raise error *)
 
-let axiom_of_p ax =
+let axiom_of_assumption ax =
   match ax with
   | (_, ((id, _)::_, e)) ->
     let name = lident_to_string id in
@@ -74,8 +84,8 @@ let rec axioms_of_parsed (start : bool) (ls : vernac_control list) =
     axioms_of_parsed true xs
   | { v = { expr = VernacSynterp (VernacEndSegment id); _ }; _ }::xs when lident_to_string id = "Signatures" ->
     []
-  | { v = { expr = VernacSynPure (VernacAssumption ((NoDischarge, Logical), _, ls)) } }::xs when start -> (* Axiom *)
-    axiom_of_p (List.hd ls) :: axioms_of_parsed start xs
+  | { v = { expr = VernacSynPure (VernacAssumption ((NoDischarge, Logical), _, [q])) } }::xs when start -> (* Axiom *)
+    axiom_of_assumption q :: axioms_of_parsed start xs
   | { v = { expr; _ }; _ }::xs -> axioms_of_parsed start xs (* Skip all other expressions *)
 
 let axioms_of_parsed = axioms_of_parsed false
