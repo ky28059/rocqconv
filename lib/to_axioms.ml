@@ -17,9 +17,6 @@ let rec axiom_of_constr_expr (c : constr_expr) =
   match c.v with
   | CPrim p -> string_of_prim_token p
   | CRef (id, _) -> Id.to_string @@ qualid_basename id
-  (* | CProdN (_b, e) ->
-    let s = "..." in (* TODO *)
-    spf "(CProdN ([%s], %s))" s @@ axiom_of_constr_expr e *)
   | CApp (f, args) ->
     let s = String.concat " " @@ List.map (fun (c, _) -> axiom_of_constr_expr c) args in
     spf "(%s %s)" (axiom_of_constr_expr f) s
@@ -37,6 +34,9 @@ let rec axiom_of_constr_expr (c : constr_expr) =
   | CNotation (_, (_, "_ -> _"), ([t1; t2], _, _, _)) -> spf "(%s #==> %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2)
   | CNotation (_, (_, "_ <-> _"), ([t1; t2], _, _, _)) -> spf "(iff %s %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2) (* TODO *)
   | CNotation (_, (_, "~ _"), ([t], _, _, _)) -> spf "(not %s)" @@ axiom_of_constr_expr t
+
+  | CNotation (_, (_, "exists _ .. _ , _"), ([t], _, _, _)) ->
+    spf "fun ((%s [@ex]) : %s) -> %s" "..." "..." @@ axiom_of_constr_expr t (* TODO: var name, type *)
 
   (* | CIf _ -> "(CIf ...)" *)
   (* | CFix _ -> "(CFix ...)" *)

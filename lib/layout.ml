@@ -9,6 +9,11 @@ let spf = Printf.sprintf
 let string_of_lident (l : lident) =
   "\"" ^ Id.to_string l.v ^ "\""
 
+let string_of_lname (l : lname) =
+  match l.v with
+  | Anonymous -> "Anonymous"
+  | Name id -> spf "(Name \"%s\")" @@ Id.to_string id
+
 let string_of_qualid (q : qualid) =
   "\"" ^ (Id.to_string @@ qualid_basename q) ^ "\""
 
@@ -33,16 +38,41 @@ let string_of_notation_entry e =
 let string_of_notation (e, n) =
   spf "(%s, \"%s\")" (string_of_notation_entry e) n
 
-let rec string_of_constr_expr (c : constr_expr) =
-  let string_of_constr_notation_subst (s, _, _, _) =
-    let p = String.concat ", " @@ List.map string_of_constr_expr s in
-    "([" ^ p ^ "], ..., ..., ...)" in
+let rec string_of_cases_pattern (e : cases_pattern_expr) =
+  match e.v with
+  | CPatAtom None -> "(CPatAtom None)"
+  | CPatAtom (Some x) -> spf "(CPatAtom (Some %s))" @@ string_of_qualid x
+  | CPatOr ls -> spf "(CPatOr [%s])" @@ String.concat ", " @@ List.map string_of_cases_pattern ls
+  | CPatPrim p -> spf "(CPatPrim %s)" @@ string_of_prim_token p
+  | CPatRecord ls -> spf "(CPatRecord [%s])" @@ String.concat ", "
+    @@ List.map (fun (e, c) -> spf "(%s, %s)" (string_of_qualid e) (string_of_cases_pattern c)) ls
+  | CPatDelimiters (_, s, c) -> spf "(CPatDelimiters (..., \"%s\", %s))" s @@ string_of_cases_pattern c
+  | CPatCast (cp, ce) -> spf "(CPatCast (%s, %s))" (string_of_cases_pattern cp) (string_of_constr_expr ce)
+  | _ -> "..."
+
+and string_of_kinded_cases_pattern ((e, _) : kinded_cases_pattern_expr) =
+  spf "(..., %s)" @@ string_of_cases_pattern e
+
+and string_of_constr_notation_subst (s, _, b, _) =
+  let exprs = String.concat ", " @@ List.map string_of_constr_expr s in
+  let binds = String.concat ", " @@ List.map string_of_kinded_cases_pattern b in
+  spf "([%s], ..., [%s], ...)" exprs binds
+
+and string_of_local_binder (e : local_binder_expr) =
+  match e with
+  | CLocalAssum (ns, _, _, e) ->
+    let s = String.concat ", " @@ List.map string_of_lname ns in
+    spf "(CLocalAssum ([%s], ..., ..., %s))" s @@ string_of_constr_expr e
+  | CLocalDef (_, _, e, _) -> spf "(CLocalDef (..., ..., %s, ...))" @@ string_of_constr_expr e
+  | CLocalPattern ce -> spf "(CLocalPattern %s)" @@ string_of_cases_pattern ce
+
+and string_of_constr_expr (c : constr_expr) =
   match c.v with
   | CRef (id, _) -> spf "(CRef (%s, ...))" @@ string_of_qualid id
   | CFix _ -> "(CFix ...)"
   | CCoFix _ -> "(CCoFix ...)"
-  | CProdN (_b, e) ->
-    let s = "..." in (* TODO *)
+  | CProdN (b, e) ->
+    let s = String.concat ", " @@ List.map string_of_local_binder b in
     spf "(CProdN ([%s], %s))" s @@ string_of_constr_expr e
   | CLambdaN _ -> "(CLambdaN ...)"
   | CLetIn _ -> "(CLetIn ...)"
