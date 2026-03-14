@@ -18,13 +18,25 @@ let axiom_of_lname (c : lname) =
   | Anonymous -> "_"
   | Name id -> Id.to_string id
 
-let rec axiom_of_constr_expr (c : constr_expr) =
+let axiom_of_id id =
+  match Id.to_string @@ qualid_basename id with  (* Re-map Rocq builtin types to OCaml *)
+  | "Z" -> "int"
+  | "Prop" -> "bool"
+  | x -> x
+
+let rec axiom_of_app f a =
+  let args = String.concat " " @@ List.map (fun (c, _) -> axiom_of_constr_expr c) a in
+  let name = axiom_of_constr_expr f in
+  match name with  (* Map generic type apps (list Z) -> (int list) to match OCaml ordering *)
+  | "list"
+  | "tree" -> spf "(%s %s)" args name  (* TODO: hard-coded types? *)
+  | _ -> spf "(%s %s)" name args
+
+and axiom_of_constr_expr (c : constr_expr) =
   match c.v with
   | CPrim p -> string_of_prim_token p
-  | CRef (id, _) -> Id.to_string @@ qualid_basename id
-  | CApp (f, args) ->
-    let s = String.concat " " @@ List.map (fun (c, _) -> axiom_of_constr_expr c) args in
-    spf "(%s %s)" (axiom_of_constr_expr f) s
+  | CRef (id, _) -> axiom_of_id id
+  | CApp (f, args) -> axiom_of_app f args
   | CNotation (_, (_, "_ = _"), ([t1; t2], _, _, _)) -> spf "(%s == %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2)
   | CNotation (_, (_, "_ + _"), ([t1; t2], _, _, _)) -> spf "(%s + %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2)
   | CNotation (_, (_, "_ - _"), ([t1; t2], _, _, _)) -> spf "(%s - %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2)
