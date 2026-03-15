@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github ky28059/rocqconv))
 
 (authors "Author Name <author@example.com>")
 
@@ -23,6 +23,7 @@
   ocaml
   dune
   (rocq-stdlib (>= 9.0.0))
+  (rocq-core (>= 9.0.1))
   (rocq-runtime (>= 9.0.1)))
  (tags
   ("add topics" "to describe" your project)))

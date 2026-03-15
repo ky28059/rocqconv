@@ -82,7 +82,7 @@ and axiom_of_constr_expr (c : constr_expr) =
   (* | CGeneralization _ -> "(CGeneralization ...)" *)
   (* | CDelimiters _ -> "(CDelimiters ...)" *)
   (* | CArray _ -> "(CArray ...)" *)
-  | _ -> "unknown constr" (* TODO: raise error *)
+  | _ -> raise @@ ConvException "Malformed constr_expr in VernacAssumption"
 
 let axiom_of_assumption ax =
   match ax with
