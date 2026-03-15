@@ -57,8 +57,10 @@ and axiom_of_constr_expr (c : constr_expr) =
     let names = String.concat " " @@ List.map axiom_of_lname ns in
     spf "fun (%s : %s) -> %s" names (axiom_of_constr_expr ty) (axiom_of_constr_expr e)
 
-  | CNotation (_, (_, "exists _ .. _ , _"), ([t], _, _, _)) ->
-    spf "fun ((%s [@ex]) : %s) -> %s" "..." "..." @@ axiom_of_constr_expr t (* TODO: var name, type *)
+  (* exists (n1 n2 ... : ty), e *)
+  | CNotation (_, (_, "exists _ .. _ , _"), ([e], _, _, [[(CLocalAssum (ns, _, _, ty))]])) ->
+    let names = String.concat " " @@ List.map axiom_of_lname ns in
+    spf "fun ((%s [@ex]) : %s) -> %s" names (axiom_of_constr_expr ty) (axiom_of_constr_expr e)
 
   (* | CIf _ -> "(CIf ...)" *)
   (* | CFix _ -> "(CFix ...)" *)

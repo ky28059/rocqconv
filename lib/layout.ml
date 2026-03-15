@@ -6,6 +6,9 @@ open Libnames
 
 let spf = Printf.sprintf
 
+let string_of_array (e : string list) =
+  spf "[%s]" @@ String.concat "; " e
+
 let string_of_lident (l : lident) =
   "\"" ^ Id.to_string l.v ^ "\""
 
@@ -19,11 +22,6 @@ let string_of_qualid (q : qualid) =
 
 let layout_ident_decl (lid, _l) =
   "(" ^ string_of_lident lid ^ ", ...)"
-
-let string_of_name (n : Name.t) =
-  match n with
-  | Name s -> spf "(Name \"%s\")" @@ Id.to_string s
-  | Anonymous -> "Anonymous"
 
 let string_of_prim_token p =
   match p with
@@ -42,9 +40,9 @@ let rec string_of_cases_pattern (e : cases_pattern_expr) =
   match e.v with
   | CPatAtom None -> "(CPatAtom None)"
   | CPatAtom (Some x) -> spf "(CPatAtom (Some %s))" @@ string_of_qualid x
-  | CPatOr ls -> spf "(CPatOr [%s])" @@ String.concat ", " @@ List.map string_of_cases_pattern ls
+  | CPatOr ls -> spf "(CPatOr %s)" @@ string_of_array @@ List.map string_of_cases_pattern ls
   | CPatPrim p -> spf "(CPatPrim %s)" @@ string_of_prim_token p
-  | CPatRecord ls -> spf "(CPatRecord [%s])" @@ String.concat ", "
+  | CPatRecord ls -> spf "(CPatRecord %s)" @@ string_of_array
     @@ List.map (fun (e, c) -> spf "(%s, %s)" (string_of_qualid e) (string_of_cases_pattern c)) ls
   | CPatDelimiters (_, s, c) -> spf "(CPatDelimiters (..., \"%s\", %s))" s @@ string_of_cases_pattern c
   | CPatCast (cp, ce) -> spf "(CPatCast (%s, %s))" (string_of_cases_pattern cp) (string_of_constr_expr ce)
@@ -53,16 +51,18 @@ let rec string_of_cases_pattern (e : cases_pattern_expr) =
 and string_of_kinded_cases_pattern ((e, _) : kinded_cases_pattern_expr) =
   spf "(..., %s)" @@ string_of_cases_pattern e
 
-and string_of_constr_notation_subst (s, _, b, _) =
-  let exprs = String.concat ", " @@ List.map string_of_constr_expr s in
-  let binds = String.concat ", " @@ List.map string_of_kinded_cases_pattern b in
-  spf "([%s], ..., [%s], ...)" exprs binds
+and string_of_constr_notation_subst (el, ell, bl, bll) =
+  let exprs = string_of_array @@ List.map string_of_constr_expr el in
+  let nexprs = string_of_array @@ List.map (fun el -> string_of_array @@ List.map string_of_constr_expr el) ell in
+  let binds = string_of_array @@ List.map string_of_kinded_cases_pattern bl in
+  let nbinds = string_of_array @@ List.map (fun b -> string_of_array @@ List.map string_of_local_binder b) bll in
+  spf "(%s, %s, %s, %s)" exprs nexprs binds nbinds
 
 and string_of_local_binder (e : local_binder_expr) =
   match e with
   | CLocalAssum (ns, _, _, e) ->
-    let s = String.concat ", " @@ List.map string_of_lname ns in
-    spf "(CLocalAssum ([%s], ..., ..., %s))" s @@ string_of_constr_expr e
+    let s = string_of_array @@ List.map string_of_lname ns in
+    spf "(CLocalAssum (%s, ..., ..., %s))" s @@ string_of_constr_expr e
   | CLocalDef (_, _, e, _) -> spf "(CLocalDef (..., ..., %s, ...))" @@ string_of_constr_expr e
   | CLocalPattern ce -> spf "(CLocalPattern %s)" @@ string_of_cases_pattern ce
 
@@ -72,14 +72,14 @@ and string_of_constr_expr (c : constr_expr) =
   | CFix _ -> "(CFix ...)"
   | CCoFix _ -> "(CCoFix ...)"
   | CProdN (b, e) ->
-    let s = String.concat ", " @@ List.map string_of_local_binder b in
-    spf "(CProdN ([%s], %s))" s @@ string_of_constr_expr e
+    let s = string_of_array @@ List.map string_of_local_binder b in
+    spf "(CProdN (%s, %s))" s @@ string_of_constr_expr e
   | CLambdaN _ -> "(CLambdaN ...)"
   | CLetIn _ -> "(CLetIn ...)"
   | CAppExpl _ -> "(CAppExpl ...)"
   | CApp (f, args) ->
-    let s = String.concat ", " @@ List.map (fun (c, _) -> spf "(%s, ...)" @@ string_of_constr_expr c) args in
-    spf "(CApp (%s, [%s]))" (string_of_constr_expr f) s
+    let s = string_of_array @@ List.map (fun (c, _) -> spf "(%s, ...)" @@ string_of_constr_expr c) args in
+    spf "(CApp (%s, %s))" (string_of_constr_expr f) s
   | CProj _ -> "(CProj ...)"
   | CRecord _ -> "(CRecord ...)"
   | CCases _ -> "(CCases ...)"
@@ -135,15 +135,15 @@ let string_of_pure p =
   | VernacOpenCloseScope (b, name) -> spf "(VernacOpenCloseScope (%b, \"%s\"))" b name
   | VernacDeclareScope name -> spf "(VernacDeclareScope \"%s\")" name
   | VernacAssumption ((dis, kind), _, ls) ->
-    let s = String.concat ", " @@ List.map (fun (_, (_, e)) -> spf "(..., (..., %s))" @@ string_of_constr_expr e) ls in
-    spf "(VernacAssumption ((%s, %s), ..., [%s]))"
+    let s = string_of_array @@ List.map (fun (_, (_, e)) -> spf "(..., (..., %s))" @@ string_of_constr_expr e) ls in
+    spf "(VernacAssumption ((%s, %s), ..., %s))"
       (string_of_discharge dis)
       (string_of_assumption_kind kind)
       s
   (* | VernacFixpoint _ -> "" *)
   | VernacStartTheoremProof (kind, e) ->
-    let p = String.concat ", " @@ List.map string_of_proof_expr e in
-    spf "(VernacStartTheoremProof (%s, [%s]))" (string_of_theorem_kind kind) p
+    let p = string_of_array @@ List.map string_of_proof_expr e in
+    spf "(VernacStartTheoremProof (%s, %s))" (string_of_theorem_kind kind) p
   | VernacProof (None, None) -> "(VernacProof (None, None)) (* Proof *)"
   | VernacProof (None, Some _) -> "(VernacProof (None, Some ...)) (* Proof using *)"
   | VernacProof (Some _, None) -> "(VernacProof (Some ..., None)) (* Proof with *)"
@@ -174,8 +174,7 @@ let string_of_synterp p =
   | VernacDefineModule (_, l, _, _, _) -> spf "(VernacDefineModule (..., %s, ..., ..., ...)" @@ string_of_lident l
   | VernacDeclareModuleType (l, _, _, _) -> spf "(VernacDeclareModuleType (%s, ..., ..., ...)" @@ string_of_lident l
   | VernacInclude _ -> "(VernacInclude ...)"
-  | VernacDeclareMLModule ls ->
-    spf "(VernacDeclareMLModule [%s])" @@ String.concat ", " ls
+  | VernacDeclareMLModule ls -> spf "(VernacDeclareMLModule %s)" @@ string_of_array ls
   | VernacChdir None -> "(VernacChdir None)"
   | VernacChdir (Some dir) -> spf "(VernacChdir (Some \"%s\"))" dir
   | VernacExtraDependency (id, s, _) -> spf "(VernacExtraDependency (%s, \"%s\", ...))" (string_of_qualid id) s
