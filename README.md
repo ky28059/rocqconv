@@ -6,8 +6,8 @@ Install dependencies with
 ```bash
 opam install . --deps-only
 ```
-Then, run the convertor with
+Then, run the converter with
 ```bash
-dune exec ./bin/main.exe [path to proof file]
+dune exec ./bin/main.exe [path to proof file] [path to output file]
 ```
-(if no path is provided, it will assume the Rocq file is located in `/tmp/query.v`).
+(the input file will default to `/tmp/query.v`, and the output file with default to `/tmp/axioms.ml`).
