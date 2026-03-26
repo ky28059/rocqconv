@@ -52,10 +52,16 @@ and axiom_of_constr_expr (c : constr_expr) =
   | CNotation (_, (_, "_ <-> _"), ([t1; t2], _, _, _)) -> spf "(iff %s %s)" (axiom_of_constr_expr t1) (axiom_of_constr_expr t2) (* TODO *)
   | CNotation (_, (_, "~ _"), ([t], _, _, _)) -> spf "(not %s)" @@ axiom_of_constr_expr t
 
-  (* forall (n1 n2 ... : ty), e *)
-  | CProdN ([(CLocalAssum (ns, _, _, ty))], e) ->
-    let names = String.concat " " @@ List.map axiom_of_lname ns in
-    spf "fun (%s : %s) -> %s" names (axiom_of_constr_expr ty) (axiom_of_constr_expr e)
+  (* forall (a1 a2 ... : ty1) (a2 b2 ... : ty2) ..., e *)
+  | CProdN (ls, e) ->
+    let rec parse_vars l =
+      match l with
+      | CLocalAssum (ns, _, _, ty) :: xs ->
+        let names = String.concat " " @@ List.map axiom_of_lname ns in
+        spf "(%s : %s)" names (axiom_of_constr_expr ty) :: parse_vars xs
+      | [] -> []
+      | _ -> raise @@ ConvException "Malformed CProdN in VernacAssumption" in
+    spf "fun %s -> %s" (String.concat " " @@ parse_vars ls) (axiom_of_constr_expr e)
 
   (* exists (n1 n2 ... : ty), e *)
   | CNotation (_, (_, "exists _ .. _ , _"), ([e], _, _, [[(CLocalAssum (ns, _, _, ty))]])) ->
@@ -82,7 +88,7 @@ and axiom_of_constr_expr (c : constr_expr) =
   (* | CGeneralization _ -> "(CGeneralization ...)" *)
   (* | CDelimiters _ -> "(CDelimiters ...)" *)
   (* | CArray _ -> "(CArray ...)" *)
-  | _ -> raise @@ ConvException "Malformed constr_expr in VernacAssumption"
+  | _ -> raise @@ ConvException (spf "Malformed constr_expr in VernacAssumption: %s" @@ string_of_constr_expr c)
 
 let axiom_of_assumption ax =
   match ax with
